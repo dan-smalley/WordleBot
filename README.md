@@ -1,0 +1,2 @@
+# WordleBot
+I pass wordles
