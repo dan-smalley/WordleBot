@@ -16,8 +16,24 @@ word_lists = json.load(f)
 
 valid_words = word_lists['valid_words']
 past_words = word_lists['past_words']
-override_starting_word = 'adieu'
-solution_index = -32
+
+""" --------------- Settings --------------- """
+
+# Choose your own starting word
+override_starting_word = None
+# Pick which solution to play against
+solution_index = -35
+
+# Use a list of all possible answers instead of all valid words
+use_only_in_play_words = True
+
+# Play against every answer to date
+run_regression = True
+
+""" --------------- End Settings --------------- """
+
+if use_only_in_play_words is True:
+    valid_words = word_lists['in_play_words']
 
 
 def score_letters(word_dict):
@@ -120,7 +136,7 @@ def main():
     # Build main our word dictionary
     available_words = {}
     for word in valid_words:
-        if word not in past_words:
+        if word not in past_words[0:solution_index]:
             available_words[word] = {
                 'letter_list': list(word),
                 'score_list': [],
@@ -153,13 +169,13 @@ def main():
             best_word = override_starting_word
         # print('Best:', best_word, available_words[best_word]['total_score'])
         # print('Worst:', worst_word, available_words[worst_word]['total_score'])
-        print(f'{best_word} {available_words[best_word]["total_score"]}  //  '
-              f'{worst_word} {available_words[worst_word]["total_score"]} //  {len(available_words)}')
+        # print(f'{best_word} {available_words[best_word]["total_score"]}  //  '
+        #       f'{worst_word} {available_words[worst_word]["total_score"]} //  {len(available_words)}')
 
         # Play highest scoring word
         result = play_word(best_word)
         if sum(result) < 10:
-            print(f'Guess {i}: {best_word}   ---  {result}')
+            # print(f'Guess {i}: {best_word}   ---  {result}')
             # Purge words that are eliminated by result
             purge_list = purge_words(available_words,best_word,result)
             for word in purge_list:
@@ -173,9 +189,34 @@ def main():
                     banned_letters.append(best_word[idx])
             # print(f'{len(available_words)} possible words left')
             i += 1
-    print(f'Solution {best_word} found in {i} guesses')
+    # print(f'Solution {best_word} found in {i} guesses')
+
+    return i
 
 
 if __name__ == "__main__":
     """ This is executed when run from the command line """
-    main()
+    if run_regression is False:
+        main()
+    else:
+        scoreboard = {
+            'starting_word': override_starting_word,
+            'wins': 0,
+            'losses': 0,
+            'guesses': {},
+            'use_only_in_play_words': use_only_in_play_words
+        }
+        for game, answer in enumerate(past_words):
+            solution_index = game
+            game_score = main()
+            if game_score > 6:
+                scoreboard['losses'] += 1
+            elif game_score <= 6:
+                scoreboard['wins'] += 1
+            if game_score not in scoreboard['guesses']:
+                scoreboard['guesses'][game_score] = 0
+            scoreboard['guesses'][game_score] += 1
+
+        print(json.dumps(scoreboard, indent=4))
+
+
